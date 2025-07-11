@@ -12,6 +12,7 @@ pub fn main() -> Nil {
       wisp.random_string(64),
     )
     |> mist.new()
+    |> mist.bind("0.0.0.0")
     |> mist.port(8080)
     |> mist.start()
 

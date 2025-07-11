@@ -1,4 +1,5 @@
 import app/web.{type Context}
+import gleam/json as j
 import wisp.{type Request, type Response}
 
 pub fn handle_request(req: Request, ctx: Context) -> Response {
@@ -34,5 +35,7 @@ pub fn handle_v1(
 }
 
 pub fn handle_health_check() -> Response {
-  wisp.ok() |> wisp.string_body("OK")
+  j.object([#("status", j.string("ok"))])
+  |> j.to_string_tree()
+  |> wisp.json_body(wisp.ok(), _)
 }

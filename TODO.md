@@ -6,11 +6,11 @@ A checklist for building a real-time chat application with Gleam, OTP, and Postg
 
 ### Phase 1: Environment & Basic Server
 
-- [ ] **Set up the Docker environment.**
+- [x] **Set up the Docker environment.**
   - Create a `Dockerfile` for a multi-stage build of the Gleam application.
-  - Create a `docker-compose.yml` to run the Gleam app service and a `postgres` service.
+  - Create a `docker-compose.yml` to run the Gleam app service and a `postgresql` service.
 
-- [ ] **Implement a basic Wisp web server.**
+- [x] **Implement a basic Wisp web server.**
   - Serve a health check endpoint to verify the server is running correctly.
   - **Endpoint:** `GET /api/v1/health`
   - **Success Response (`200 OK`):** `{"status": "ok"}`

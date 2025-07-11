@@ -1,0 +1,32 @@
+name: koe
+services:
+  postgresql:
+    container_name: postgresql
+    image: postgres:17-alpine
+    networks:
+      - net
+    ports:
+      - "5555:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data/pg_data
+    environment:
+      POSTGRES_PASSWORD: assword
+      POSTGRES_DB: koe
+      POSTGRES_USER: admeanie
+      PGDATA: /var/lib/postgresql/data/pg_data
+
+  web:
+    container_name: web
+    build: .
+    networks:
+      - net
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgresql
+
+networks:
+  net:
+
+volumes:
+  pg_data:
