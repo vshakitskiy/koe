@@ -12,6 +12,9 @@ version = "1.0.0"
 # For a full reference of all the available options, you can have a look at
 # https://gleam.run/writing-gleam/gleam-toml/.
 
+[erlang]
+application_start_module = "app"
+
 [dependencies]
 gleam_stdlib = ">= 0.44.0 and < 2.0.0"
 wisp = ">= 1.8.0 and < 2.0.0"
@@ -20,6 +23,10 @@ gleam_json = ">= 3.0.2 and < 4.0.0"
 gleam_erlang = ">= 1.2.0 and < 2.0.0"
 mist = ">= 5.0.2 and < 6.0.0"
 gleam_httpc = ">= 4.2.1 and < 5.0.0"
+pog = ">= 4.0.0 and < 5.0.0"
+envoy = ">= 1.0.2 and < 2.0.0"
+gleam_otp = ">= 1.0.0 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
+squirrel = ">= 4.0.0 and < 5.0.0"

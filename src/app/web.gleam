@@ -1,8 +1,8 @@
+import pog
 import wisp.{type Request, type Response}
 
 pub type Context {
-  // mock context
-  Context
+  Context(db: pog.Connection)
 }
 
 pub fn req_middleware(
