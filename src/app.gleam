@@ -11,10 +11,12 @@ import wisp/wisp_mist
 pub fn start(_type, _args) {
   let db_name = db.process()
 
-  let db = pog.named_connection(db_name)
-  let assert Ok(db_pool) = db.connection_pool(db_name)
+  let conn = pog.named_connection(db_name)
 
-  let ctx = Context(db:)
+  let assert Ok(config) = db.parse_database_uri(db_name)
+  let db_pool = pog.supervised(config)
+
+  let ctx = Context(conn:)
   let secret_key_base = wisp.random_string(64)
 
   let mist_server =

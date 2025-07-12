@@ -19,7 +19,7 @@ A checklist for building a real-time chat application with Gleam, OTP, and Postg
 
 ### Phase 2: User Accounts & Authentication
 
-- [ ] **Define the database schema and implement registration.**
+- [x] **Define the database schema and implement registration.**
   - Create a SQL migration file for the `users` table (`id`, `username`, `password_hash`).
   - Implement the user registration endpoint.
   - **Endpoint:** `POST /api/v1/register`
