@@ -5,7 +5,6 @@ import gleam/erlang/process
 import gleam/otp/static_supervisor as supervisor
 import mist
 import pog
-import wisp
 import wisp/wisp_mist
 
 pub fn start(_type, _args) {
@@ -17,7 +16,8 @@ pub fn start(_type, _args) {
   let db_pool = pog.supervised(config)
 
   let ctx = Context(conn:)
-  let secret_key_base = wisp.random_string(64)
+  let secret_key_base =
+    "I1nTKL76iJFdBAPgnzAiQC0efdIuN4lSoh5h1LWrW4canROI0jDRup8fuibW5L3M"
 
   let mist_server =
     router.handle_request(_, ctx)

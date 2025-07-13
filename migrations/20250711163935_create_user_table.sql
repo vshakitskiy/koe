@@ -3,7 +3,7 @@
 create table users (
     id serial primary key,
     username varchar(255) not null unique,
-    password_hash varchar(255) not null
+    password_hash text not null
 );
 -- +goose StatementEnd
 

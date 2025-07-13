@@ -26,6 +26,7 @@ gleam_httpc = ">= 4.2.1 and < 5.0.0"
 pog = ">= 4.0.0 and < 5.0.0"
 envoy = ">= 1.0.2 and < 2.0.0"
 gleam_otp = ">= 1.0.0 and < 2.0.0"
+argus = ">= 1.0.3 and < 2.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"

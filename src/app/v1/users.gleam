@@ -1,9 +1,10 @@
 import app/v1/users/sql
 import app/web.{type Context}
+import argus
 import gleam/dynamic/decode
 import gleam/http
 import gleam/json as j
-import gleam/result
+import gleam/result.{try}
 import pog
 import wisp.{type Request, type Response}
 
@@ -26,19 +27,30 @@ pub fn handle_auth(
 // }
 
 fn register(req: Request, ctx: Context) -> Response {
-  use json <- wisp.require_json(req)
+  use json <- web.require_json(req)
 
-  let result = {
-    use #(username, password) <- result.try(
+  let resp = {
+    use #(username, password) <- try(
       decode.run(json, {
         use username <- decode.field("username", decode.string)
         use password <- decode.field("password", decode.string)
         decode.success(#(username, password))
       })
-      |> result.replace_error(wisp.unprocessable_entity()),
+      |> result.replace_error(web.invalid_body()),
     )
 
-    case sql.create_user(ctx.conn, username, password) {
+    use hashes <- try(
+      argus.hasher()
+      |> argus.algorithm(argus.Argon2id)
+      |> argus.time_cost(3)
+      |> argus.memory_cost(12_228)
+      |> argus.parallelism(1)
+      |> argus.hash_length(32)
+      |> argus.hash(password, argus.gen_salt())
+      |> result.map_error(web.internal),
+    )
+
+    case sql.create_user(ctx.conn, username, hashes.encoded_hash) {
       Ok(pog.Returned(count: 1, rows: _)) ->
         Ok(
           j.object([#("message", j.string("User created successfully"))])
@@ -57,7 +69,7 @@ fn register(req: Request, ctx: Context) -> Response {
     }
   }
 
-  result.unwrap_both(result)
+  result.unwrap_both(resp)
 }
 
 fn login(req: Request, ctx: Context) -> Response {
