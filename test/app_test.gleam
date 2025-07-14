@@ -1,4 +1,5 @@
 import app/db
+import app/web.{type Context, Context}
 import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/http/response
@@ -20,30 +21,28 @@ pub fn should_be_valid_resp(resp: response.Response(wisp.Body), status: Int) {
   assert resp.status == status
 }
 
-pub fn with_body(
+pub fn ensure_body(
   resp: response.Response(wisp.Body),
   decoder: decode.Decoder(a),
   handle_success: fn(a) -> Nil,
 ) {
-  let assert Ok(data) =
-    resp
-    |> testing.string_body()
-    |> j.parse(decoder)
-
+  let assert Ok(data) = resp |> testing.string_body() |> j.parse(decoder)
   handle_success(data)
 }
 
 pub fn start_db_pool() -> actor.Started(pog.Connection) {
-  let assert Ok(config) = db.parse_database_uri(db.process())
+  let assert Ok(config) = db.parse_database_uri(db.create_name())
 
   let assert Ok(started) = pog.start(config)
   started
 }
 
-pub fn close_pool(conn: actor.Started(pog.Connection)) -> Nil {
-  process.send_exit(conn.pid)
+pub fn close_pool(actor: actor.Started(pog.Connection)) -> Nil {
+  process.send_exit(actor.pid)
 }
 
-pub fn mock_conn() {
-  pog.named_connection(db.process())
+pub fn shutdown_context(handle_test: fn(Context) -> Nil) {
+  let pool = start_db_pool()
+  handle_test(Context(conn: pool.data))
+  close_pool(pool)
 }

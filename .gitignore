@@ -3,3 +3,8 @@
 /build
 erl_crash.dump
 .env
+
+
+# Added by cargo
+
+/target

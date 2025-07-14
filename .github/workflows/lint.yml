@@ -1,4 +1,4 @@
-name: format
+name: lint
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  format:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,4 +18,5 @@ jobs:
           rebar3-version: "3"
           # elixir-version: "1"
       - run: gleam deps download
+      # - run: gleam test
       - run: gleam format --check src test

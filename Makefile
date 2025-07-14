@@ -1,10 +1,13 @@
-DATABASE_URL = postgres://admeanie:assword@localhost:5555/koe
+ifneq (,$(wildcard ./.env))
+    include .env
+    export
+endif
 
 squirrel:
-	DATABASE_URL=$(DATABASE_URL) gleam run -m squirrel
+	DATABASE_URL=$(GOOSE_DBSTRING) PORT=$(PORT) SECRET_KEY_BASE=$(SECRET_KEY_BASE) MODE="PACKAGE" gleam run -m squirrel
 
 run:
-	DATABASE_URL=$(DATABASE_URL) gleam run
+	DATABASE_URL=$(GOOSE_DBSTRING) PORT=$(PORT) SECRET_KEY_BASE=$(SECRET_KEY_BASE) MODE="START" gleam run
 
 tests:
-	DATABASE_URL=$(DATABASE_URL) gleam test
+	DATABASE_URL=$(GOOSE_DBSTRING) PORT=$(PORT) SECRET_KEY_BASE=$(SECRET_KEY_BASE) MODE="TEST" gleam test

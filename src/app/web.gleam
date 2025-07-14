@@ -17,11 +17,14 @@ pub fn req_middleware(
 
   use <- wisp.log_request(req)
 
-  use <- wisp.rescue_crashes()
-
   use req <- wisp.handle_head(req)
 
-  handle_request(req)
+  let resp = wisp.rescue_crashes(fn() { handle_request(req) })
+
+  case resp.status, resp.body {
+    500, wisp.Empty -> internal("server rescued during request, returning 500")
+    _, _ -> resp
+  }
 }
 
 pub fn unknown_endpoint() -> Response {
@@ -31,7 +34,7 @@ pub fn unknown_endpoint() -> Response {
 }
 
 pub fn internal(issue: a) -> Response {
-  io.println_error("↓ INTERNAL ERROR ↓")
+  io.println_error("\n↓ INTERNAL ERROR ↓")
   echo issue
 
   j.object([#("error", j.string("Something went wrong, try again later"))])
