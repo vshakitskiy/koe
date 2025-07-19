@@ -18,18 +18,17 @@ pub fn start(_type, _args) -> Result(process.Pid, actor.StartError) {
   let mode =
     envoy.get("MODE")
     |> result.unwrap("START")
-  use <- bool.lazy_guard(mode != "START", fn() {
-    io.println("Starting empty supervisor process (mode: " <> mode <> ")")
 
-    let supervisor =
-      supervisor.new(supervisor.OneForOne)
-      |> supervisor.start()
+  use <- bool.lazy_guard(mode != "START", start_empty_supervisor(mode))
 
-    case supervisor {
-      Error(error) -> Error(error)
-      Ok(supervisor) -> Ok(supervisor.pid)
+  let Nil = case envoy.get("JWT_SECRET") {
+    Ok(_) -> Nil
+    Error(Nil) -> {
+      io.println_error("↓ Failed to start app ↓")
+      echo "JWT_SECRET variable is not set"
+      halt()
     }
-  })
+  }
 
   io.println("Starting main supervisor process (mode: " <> mode <> ")")
 
@@ -80,6 +79,21 @@ pub fn start(_type, _args) -> Result(process.Pid, actor.StartError) {
 
 pub fn main() -> Nil {
   process.sleep_forever()
+}
+
+fn start_empty_supervisor(mode: String) {
+  fn() {
+    io.println("Starting empty supervisor process (mode: " <> mode <> ")")
+
+    let supervisor =
+      supervisor.new(supervisor.OneForOne)
+      |> supervisor.start()
+
+    case supervisor {
+      Error(error) -> Error(error)
+      Ok(supervisor) -> Ok(supervisor.pid)
+    }
+  }
 }
 
 @external(erlang, "erlang", "halt")

@@ -1,2 +1,3 @@
-delete from users
+delete
+from users
 where username = $1;

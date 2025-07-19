@@ -25,4 +25,4 @@ To run the application locally, follow the guide:
 2. Run `docker-compose up -d postgresql` to run the PostgreSQL database.
 3. Use `make run` to start the application. This will pass all environment variables needed to the application.
 4. Use `make test` to run the tests.
-5. To regenerate sql queries, run `make squirrel`.
+5. To regenerate sql queries, run `make squirel`.

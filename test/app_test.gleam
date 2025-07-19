@@ -46,3 +46,19 @@ pub fn shutdown_context(handle_test: fn(Context) -> Nil) {
   handle_test(Context(conn: pool.data))
   close_pool(pool)
 }
+
+pub fn ensure_message(resp: response.Response(wisp.Body), target: String) -> Nil {
+  use message <- ensure_body(resp, {
+    use message <- decode.field("message", decode.string)
+    decode.success(message)
+  })
+  assert message == target
+}
+
+pub fn ensure_error(resp: response.Response(wisp.Body), target: String) -> Nil {
+  use error <- ensure_body(resp, {
+    use error <- decode.field("error", decode.string)
+    decode.success(error)
+  })
+  assert error == target
+}

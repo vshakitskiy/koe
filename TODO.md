@@ -27,7 +27,7 @@ A checklist for building a real-time chat application with Gleam, OTP, and Postg
   - **Success Response (`201 Created`):** `{"message": "User created successfully"}`
   - **Error Response (`409 Conflict`):** `{"error": "Username already taken"}`
 
-- [ ] **Implement cookie-based authentication.**
+- [x] **Implement cookie-based authentication.**
   - Implement the login endpoint, which sets a secure `HttpOnly` cookie on success.
   - **Endpoint:** `POST /api/v1/login`
   - **Request Body:** `{"username": "gleam_fan", "password": "my_secure_password"}`
@@ -36,7 +36,7 @@ A checklist for building a real-time chat application with Gleam, OTP, and Postg
     - **Body:** `{"message": "Login successful"}`
   - **Error Response (`401 Unauthorized`):** `{"error": "Invalid username or password"}`
 
-- [ ] **Implement the logout endpoint.**
+- [x] **Implement the logout endpoint.**
   - The endpoint should clear the `auth_token` cookie.
   - **Endpoint:** `POST /api/v1/logout`
   - **Success Response (`200 OK`):**
