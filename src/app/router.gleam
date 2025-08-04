@@ -1,24 +1,40 @@
-import app/v1/router as v1
+import app/v1/api as api_v1
+import app/v1/ws as ws_v1
 import app/web.{type Context}
-import wisp.{type Request, type Response}
+import gleam/http/request
+import gleam/http/response
+import mist.{type Connection, type ResponseData}
+import wisp
+import wisp/wisp_mist
 
-pub fn handle_request(req: Request, ctx: Context) -> Response {
-  use req <- web.req_middleware(req)
+pub fn mist_handler(ctx: Context, secret_key_base: String) {
+  fn(req: request.Request(Connection)) -> response.Response(ResponseData) {
+    case request.path_segments(req) {
+      // TODO: join websockets with authentication
+      ["api", "v1", "rooms", room_name, "ws", user] ->
+        ws_v1.handle_room_websocket(req, ctx, room_name, user)
+      segments -> {
+        let mist_to_wisp = wisp_handler(_, ctx, segments)
+        let handler = wisp_mist.handler(mist_to_wisp, secret_key_base)
+        handler(req)
+      }
+    }
+  }
+}
 
-  case wisp.path_segments(req) {
-    ["api", ..segments] -> handle_api(req, ctx, segments)
-    // TODO: websocket handler
+pub fn wisp_handler(
+  req: wisp.Request,
+  ctx: Context,
+  segments: List(String),
+) -> wisp.Response {
+  use req <- web.root_middleware(req)
+
+  case segments {
+    ["api", "v1", ..segments] -> api_v1.handle_request(req, ctx, segments)
     _ -> web.unknown_endpoint()
   }
 }
 
-pub fn handle_api(
-  req: Request,
-  ctx: Context,
-  segments: List(String),
-) -> Response {
-  case segments {
-    ["v1", ..segments] -> v1.handle_v1_rest(req, ctx, segments)
-    _ -> web.unknown_endpoint()
-  }
+pub fn handle_request(req: wisp.Request, ctx: Context) -> wisp.Response {
+  wisp_handler(req, ctx, request.path_segments(req))
 }

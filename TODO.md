@@ -45,6 +45,7 @@ A checklist for building a real-time chat application with Gleam, OTP, and Postg
 
 ---
 
+<!-- TODO: rewrite TODO phases -->
 ### Phase 3: Core Chat Logic & API
 
 - [ ] **Define the OTP actors for stateful chat logic.**
@@ -70,7 +71,7 @@ A checklist for building a real-time chat application with Gleam, OTP, and Postg
 - [ ] **Implement the WebSocket connection endpoint.**
   - The handler must validate the `auth_token` cookie from the HTTP upgrade request.
   - On success, a `ConnectionActor` is spawned and registered with the appropriate `RoomActor`.
-  - **Endpoint:** `GET /ws/v1/chat/{room_id}`
+  - **Endpoint:** `GET /api/v1/room/{room_name}/ws`
   - **Failure Response:** `401 Unauthorized` (if cookie is invalid or missing).
 
 - [ ] **Implement the real-time messaging protocol.**

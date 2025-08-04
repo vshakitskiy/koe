@@ -4,7 +4,7 @@ import gleam/http
 import gleam/json as j
 import wisp.{type Request, type Response}
 
-pub fn handle_v1_rest(
+pub fn handle_request(
   req: Request,
   ctx: Context,
   segments: List(String),
@@ -24,7 +24,6 @@ pub fn handle_health_check(req: Request) -> Response {
       j.object([#("status", j.string("ok"))])
       |> j.to_string_tree()
       |> wisp.json_body(wisp.ok(), _)
-
     _ -> web.method_not_allowed([http.Get])
   }
 }

@@ -1,5 +1,6 @@
 import app/db
 import app/router
+import app/v1/actors
 import app/web.{Context}
 import envoy
 import gleam/bool
@@ -12,66 +13,45 @@ import gleam/result
 import mist
 import pog
 import wisp
-import wisp/wisp_mist
 
 pub fn start(_type, _args) -> Result(process.Pid, actor.StartError) {
-  let mode =
-    envoy.get("MODE")
-    |> result.unwrap("START")
+  use <- bool.lazy_guard(env_or("MODE", "") != "MAIN", start_empty_supervisor)
 
-  use <- bool.lazy_guard(mode != "START", start_empty_supervisor(mode))
+  io.println("[app] Starting supervisor...")
+  let supervisor = supervisor.new(supervisor.OneForOne)
 
-  let Nil = case envoy.get("JWT_SECRET") {
-    Ok(_) -> Nil
-    Error(Nil) -> {
-      io.println_error("↓ Failed to start app ↓")
-      echo "JWT_SECRET variable is not set"
-      halt()
-    }
-  }
+  let postgresql_name = process.new_name("postgresql")
+  let conn = db.from_name(postgresql_name)
 
-  io.println("Starting main supervisor process (mode: " <> mode <> ")")
-
-  let postgresql = db.create_name()
-
-  let config = case db.parse_database_uri(postgresql) {
-    Ok(config) -> config
-    Error(error) -> {
-      io.println_error("↓ Failed to parse database URI ↓")
-      echo error
-      halt()
-    }
-  }
-
+  use config <- result.try(
+    db.parse_database_uri(postgresql_name)
+    |> result.replace_error(actor.InitFailed("Failed to parse database URI")),
+  )
   let db_pool = pog.supervised(config)
+  let supervisor = supervisor.add(supervisor, db_pool)
 
-  let conn = db.from_name(postgresql)
-  let ctx = Context(conn:)
+  let #(supervisor, rooms_manager) =
+    actors.add_chat_actors(
+      supervisor,
+      name: process.new_name("manager"),
+      rooms_amount: 1000,
+      print_every: 100,
+    )
 
-  let secret_key_base =
-    envoy.get("SECRET_KEY_BASE")
-    |> result.unwrap(wisp.random_string(64))
+  let jwt_secret = env_or("JWT_SECRET", wisp.random_string(64))
+  let ctx = Context(conn:, jwt_secret:, rooms_manager:)
 
-  let port =
-    envoy.get("PORT")
-    |> result.try(int.parse)
-    |> result.unwrap(8080)
+  let secret_key_base = env_or("SECRET_KEY_BASE", wisp.random_string(64))
+  let port = env_or("PORT", "8080") |> int.parse |> result.unwrap(8080)
 
   let mist_server =
-    router.handle_request(_, ctx)
-    |> wisp_mist.handler(secret_key_base)
-    |> mist.new()
+    mist.new(router.mist_handler(ctx, secret_key_base))
     |> mist.bind("0.0.0.0")
     |> mist.port(port)
     |> mist.supervised()
+  let supervisor = supervisor.add(supervisor, mist_server)
 
-  let supervisor =
-    supervisor.new(supervisor.OneForOne)
-    |> supervisor.add(db_pool)
-    |> supervisor.add(mist_server)
-    |> supervisor.start()
-
-  case supervisor {
+  case supervisor.start(supervisor) {
     Error(error) -> Error(error)
     Ok(supervisor) -> Ok(supervisor.pid)
   }
@@ -81,20 +61,20 @@ pub fn main() -> Nil {
   process.sleep_forever()
 }
 
-fn start_empty_supervisor(mode: String) {
-  fn() {
-    io.println("Starting empty supervisor process (mode: " <> mode <> ")")
+fn start_empty_supervisor() {
+  io.println("[app] Starting empty supervisor...")
 
-    let supervisor =
-      supervisor.new(supervisor.OneForOne)
-      |> supervisor.start()
+  let supervisor =
+    supervisor.new(supervisor.OneForOne)
+    |> supervisor.start()
 
-    case supervisor {
-      Error(error) -> Error(error)
-      Ok(supervisor) -> Ok(supervisor.pid)
-    }
+  case supervisor {
+    Error(error) -> Error(error)
+    Ok(supervisor) -> Ok(supervisor.pid)
   }
 }
 
-@external(erlang, "erlang", "halt")
-fn halt() -> a
+fn env_or(name: String, default: String) -> String {
+  envoy.get(name)
+  |> result.unwrap(default)
+}

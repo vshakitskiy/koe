@@ -1,64 +1,46 @@
-import app/db
 import app/router
-import app/web.{Context}
-import app_test.{ensure_body, should_be_valid_resp}
+import app_test.{ensure_body, ensure_error, mock_context}
 import gleam/dynamic/decode
 import wisp/testing
 
 pub fn unknown_endpoint_test() {
   let req = testing.get("/foobar", [])
-  let ctx = Context(conn: db.mock_connection())
-  let resp = router.handle_request(req, ctx)
 
-  should_be_valid_resp(resp, 404)
+  let resp = router.handle_request(req, mock_context())
+  assert resp.status == 404
 
-  use error <- ensure_body(resp, {
-    use error <- decode.field("error", decode.string)
-    decode.success(error)
-  })
-  assert error == "Unknown endpoint"
+  ensure_error(resp, "Unknown endpoint")
+}
+
+fn health_resp_decoder() -> decode.Decoder(String) {
+  use status <- decode.field("status", decode.string)
+  decode.success(status)
 }
 
 pub fn v1_ensure_server_health_test() {
   let req = testing.get("/api/v1/health", [])
-  let ctx = Context(conn: db.mock_connection())
-  let resp = router.handle_request(req, ctx)
 
-  should_be_valid_resp(resp, 200)
+  let resp = router.handle_request(req, mock_context())
+  assert resp.status == 200
 
-  use status <- ensure_body(resp, {
-    use status <- decode.field("status", decode.string)
-    decode.success(status)
-  })
+  use status <- ensure_body(resp, health_resp_decoder())
   assert status == "ok"
 }
 
 pub fn v1_invalid_method_test() {
   let req = testing.post("/api/v1/health", [], "")
-  let ctx = Context(conn: db.mock_connection())
-  let resp = router.handle_request(req, ctx)
 
-  should_be_valid_resp(resp, 405)
-
-  use error <- ensure_body(resp, {
-    use error <- decode.field("error", decode.string)
-    decode.success(error)
-  })
-  assert error == "Method not allowed"
+  let resp = router.handle_request(req, mock_context())
+  assert resp.status == 405
+  ensure_error(resp, "Method not allowed")
 }
 
 pub fn v1_not_a_json_request_test() {
   let req = testing.post("/api/v1/auth/register", [], "")
-  let ctx = Context(conn: db.mock_connection())
-  let resp = router.handle_request(req, ctx)
 
-  should_be_valid_resp(resp, 415)
-
-  use error <- ensure_body(resp, {
-    use error <- decode.field("error", decode.string)
-    decode.success(error)
-  })
-  assert error == "Content type must be application/json"
+  let resp = router.handle_request(req, mock_context())
+  assert resp.status == 415
+  ensure_error(resp, "Content type must be application/json")
 }
 
 pub fn v1_bad_req_json_test() {
@@ -68,14 +50,8 @@ pub fn v1_bad_req_json_test() {
       [#("content-type", "application/json")],
       "{",
     )
-  let ctx = Context(conn: db.mock_connection())
-  let resp = router.handle_request(req, ctx)
 
-  should_be_valid_resp(resp, 400)
-
-  use error <- ensure_body(resp, {
-    use error <- decode.field("error", decode.string)
-    decode.success(error)
-  })
-  assert error == "Invalid json body"
+  let resp = router.handle_request(req, mock_context())
+  assert resp.status == 400
+  ensure_error(resp, "Invalid json body")
 }

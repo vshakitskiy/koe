@@ -1,22 +1,25 @@
-import envoy
+import app/v1/actors
+import app/web/jwt
 import gleam/dynamic
-import gleam/dynamic/decode
 import gleam/http
 import gleam/http/response
 import gleam/io
 import gleam/json as j
 import gleam/list
-import gleam/result.{try}
+import gleam/result
 import gleam/string
-import gwt
 import pog
 import wisp.{type Request, type Response}
 
 pub type Context {
-  Context(conn: pog.Connection)
+  Context(
+    conn: pog.Connection,
+    jwt_secret: String,
+    rooms_manager: actors.RoomsManager,
+  )
 }
 
-pub fn req_middleware(
+pub fn root_middleware(
   req: Request,
   handle_request: fn(Request) -> Response,
 ) -> Response {
@@ -36,32 +39,25 @@ pub fn req_middleware(
 
 pub fn auth_middleware(
   req: Request,
-  handle_request: fn(Int) -> Response,
+  ctx: Context,
+  handle_request: fn(jwt.Claims) -> Response,
 ) -> Response {
   case wisp.get_cookie(req, "session", wisp.Signed) {
     Error(_) -> error_response(401, "Unauthorized")
     Ok(session) -> {
-      let assert Ok(secret) = envoy.get("JWT_SECRET")
-
-      case payload_from_session(session, secret) {
-        Error(res) -> res
-        Ok(user_id) -> handle_request(user_id)
+      case jwt.verify_token(session, ctx.jwt_secret) {
+        Error(_) -> error_response(401, "Unauthorized")
+        Ok(claims) -> handle_request(claims)
       }
     }
   }
 }
 
-pub fn wrap_handler(
+pub fn return_result(
   handle_request: fn() -> Result(Response, Response),
 ) -> Response {
   handle_request()
   |> result.unwrap_both()
-}
-
-pub fn unknown_endpoint() -> Response {
-  j.object([#("error", j.string("Unknown endpoint"))])
-  |> j.to_string_tree()
-  |> wisp.json_body(wisp.not_found(), _)
 }
 
 pub fn error_response(status: Int, error: String) -> Response {
@@ -76,19 +72,36 @@ pub fn message_response(status: Int, message: String) -> Response {
   |> wisp.json_body(wisp.response(status), _)
 }
 
-pub fn internal(issue: a) -> Response {
-  io.println_error("\n↓ INTERNAL ERROR ↓")
-  echo issue
+pub fn invalid_json() -> Response {
+  error_response(400, "Invalid json body")
+}
 
-  error_response(500, "Something went wrong, try again later")
+pub fn unknown_endpoint() -> Response {
+  j.object([#("error", j.string("Unknown endpoint"))])
+  |> j.to_string_tree()
+  |> wisp.json_body(wisp.not_found(), _)
 }
 
 pub fn method_not_allowed(allowed: List(http.Method)) -> Response {
-  allowed
-  |> list.map(http.method_to_string)
+  list.map(allowed, http.method_to_string)
   |> list.sort(string.compare)
   |> string.join(", ")
   |> response.set_header(error_response(405, "Method not allowed"), "allow", _)
+}
+
+pub fn require_method(
+  req: Request,
+  method: http.Method,
+  handle_request: fn() -> Response,
+) -> Response {
+  case req.method == method {
+    True -> handle_request()
+    False -> method_not_allowed([method])
+  }
+}
+
+pub fn request_too_large() -> Response {
+  error_response(413, "Request body is too large")
 }
 
 pub fn unsupported_media() -> Response {
@@ -96,16 +109,15 @@ pub fn unsupported_media() -> Response {
   |> response.set_header("content-type", "application/json; charset=utf-8")
 }
 
-pub fn invalid_json() -> Response {
-  error_response(400, "Invalid json body")
-}
-
-pub fn request_too_large() -> Response {
-  error_response(413, "Request body is too large")
-}
-
 pub fn invalid_body() -> Response {
   error_response(422, "Invalid request body")
+}
+
+pub fn internal(issue: a) -> Response {
+  io.println_error("\n↓ INTERNAL ERROR ↓")
+  echo issue
+
+  error_response(500, "Something went wrong, try again later")
 }
 
 pub fn require_json(
@@ -119,20 +131,4 @@ pub fn require_json(
     400 -> invalid_json()
     _ -> resp
   }
-}
-
-pub fn payload_from_session(
-  session: String,
-  secret: String,
-) -> Result(Int, Response) {
-  use jwt <- try(
-    gwt.from_signed_string(session, secret)
-    |> result.replace_error(error_response(401, "Unauthorized")),
-  )
-  use user_id <- try(
-    gwt.get_payload_claim(jwt, "user_id", decode.int)
-    |> result.replace_error(error_response(401, "Unauthorized")),
-  )
-
-  Ok(user_id)
 }
