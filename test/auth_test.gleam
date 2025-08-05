@@ -1,6 +1,7 @@
 import app/router
 import app/v1/users/sql
 import app/web.{type Context}
+import app/web/jwt
 import app_test.{
   context, ensure_body, ensure_error, ensure_message, mock_context,
 }
@@ -10,7 +11,6 @@ import gleam/dynamic/decode
 import gleam/http/response
 import gleam/int
 import gleam/json as j
-import gwt
 import pog
 import wisp
 import wisp/testing
@@ -91,13 +91,6 @@ pub fn verify_signed_session(
   session
 }
 
-pub fn payload_from_session(session: String, jwt_secret: String) -> Int {
-  let assert Ok(jwt) = gwt.from_signed_string(session, jwt_secret)
-  let assert Ok(user_id) = gwt.get_payload_claim(jwt, "user_id", decode.int)
-
-  user_id
-}
-
 pub fn v1_register_invalid_req_body_test() {
   let body = j.object([#("username", j.string(test_username(1)))])
   let req = testing.post_json("/api/v1/auth/register", [], body)
@@ -139,11 +132,11 @@ pub fn v1_login_success_test() {
 
   use session <- include_user_authorized(ctx, #(test_username(1), password))
 
-  let user_id = payload_from_session(session, ctx.jwt_secret)
+  let assert Ok(claims) = jwt.verify_token(session, ctx.jwt_secret)
 
   let assert Ok(pog.Returned(1, [user])) =
     sql.find_user_by_username(ctx.conn, test_username(1))
-  assert user.id == user_id
+  assert user.id == claims.user_id
 }
 
 pub fn v1_login_invalid_username_test() {
@@ -183,7 +176,7 @@ pub fn v1_session_test() {
 
   use session <- include_user_authorized(ctx, #(test_username(1), password))
 
-  let user_id = payload_from_session(session, ctx.jwt_secret)
+  let assert Ok(claims) = jwt.verify_token(session, ctx.jwt_secret)
 
   let req =
     testing.get("/api/v1/auth/session", [])
@@ -192,7 +185,7 @@ pub fn v1_session_test() {
   let resp = router.handle_request(req, ctx)
   assert resp.status == 200
   use message <- ensure_body(resp, session_resp_decoder())
-  assert message == #(user_id, test_username(1))
+  assert message == #(claims.user_id, claims.username)
 }
 
 pub fn v1_logout_test() {

@@ -6,23 +6,29 @@ import gleam/time/timestamp
 import gwt
 
 pub type Claims {
-  Claims(user_id: Int)
+  Claims(user_id: Int, username: String)
 }
 
-pub fn new_claims(user_id: Int) -> Claims {
-  Claims(user_id)
+pub fn new_claims(user_id: Int, username: String) -> Claims {
+  Claims(user_id, username)
 }
 
 fn insert_claims(jwt_builder: gwt.JwtBuilder, payload: Claims) -> gwt.JwtBuilder {
   gwt.set_payload_claim(jwt_builder, "user_id", j.int(payload.user_id))
+  |> gwt.set_payload_claim("username", j.string(payload.username))
 }
 
 fn extract_claims(
   jwt: gwt.Jwt(gwt.Verified),
 ) -> Result(Claims, gwt.JwtDecodeError) {
   use user_id <- result.try(gwt.get_payload_claim(jwt, "user_id", decode.int))
+  use username <- result.try(gwt.get_payload_claim(
+    jwt,
+    "username",
+    decode.string,
+  ))
 
-  Ok(Claims(user_id))
+  Ok(Claims(user_id, username))
 }
 
 pub fn sign_token(

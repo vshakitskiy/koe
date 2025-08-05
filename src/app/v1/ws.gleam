@@ -2,7 +2,6 @@ import app/v1/actors/manager
 import app/v1/actors/room
 import app/v1/actors/types
 import app/web.{type Context}
-import gleam/bytes_tree
 import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/http/request
@@ -20,26 +19,21 @@ pub fn handle_room_websocket(
   req: request.Request(Connection),
   ctx: Context,
   room_name: String,
-  user: String,
 ) -> response.Response(ResponseData) {
+  use claims <- web.mist_auth_middleware(req, ctx)
+
   let room = manager.get_or_create_room(ctx.rooms_manager, room_name)
 
   case room {
     Ok(room) ->
       mist.websocket(
         request: req,
-        on_init: fn(_conn) { on_init(room, user) },
+        on_init: fn(_conn) { on_init(room, claims.username) },
         handler: handler,
         on_close: on_close,
       )
-    Error(types.NoAvailableRooms) -> {
-      j.object([#("error", j.string("No available rooms"))])
-      |> j.to_string_tree()
-      |> bytes_tree.from_string_tree()
-      |> mist.Bytes()
-      |> response.set_body(response.new(400), _)
-      |> response.set_header("content-type", "application/json; charset=utf-8")
-    }
+    Error(types.NoAvailableRooms) ->
+      web.mist_error_resp(400, "No available rooms")
   }
 }
 

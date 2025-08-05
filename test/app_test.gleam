@@ -1,4 +1,5 @@
 import app/db
+import app/env
 import app/v1/actors
 import app/v1/actors/types
 import app/web.{type Context, Context}
@@ -27,7 +28,12 @@ fn start_test_supervisor() {
 
   let supervisor = supervisor.new(supervisor.OneForOne)
 
-  use config <- result.try(db.parse_database_uri(postgresql_name()))
+  use database_url <- result.try(env.database_url())
+
+  use config <- result.try(db.parse_database_uri(
+    postgresql_name(),
+    database_url,
+  ))
   let db_pool = pog.supervised(config)
   let supervisor = supervisor.add(supervisor, db_pool)
 

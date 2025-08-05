@@ -11,8 +11,8 @@ pub fn mist_handler(ctx: Context, secret_key_base: String) {
   fn(req: request.Request(Connection)) -> response.Response(ResponseData) {
     case request.path_segments(req) {
       // TODO: join websockets with authentication
-      ["api", "v1", "rooms", room_name, "ws", user] ->
-        ws_v1.handle_room_websocket(req, ctx, room_name, user)
+      ["api", "v1", "rooms", room_name, "ws"] ->
+        ws_v1.handle_room_websocket(req, ctx, room_name)
       segments -> {
         let mist_to_wisp = wisp_handler(_, ctx, segments)
         let handler = wisp_mist.handler(mist_to_wisp, secret_key_base)
